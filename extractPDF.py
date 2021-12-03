@@ -1,14 +1,13 @@
 #!/usr/bin/python
 
 """
-xtracts a page range into a new PDF.
+Extracts a page range into a new PDF.
 """
 
 import sys
 import os
 import argparse
-from CoreGraphics import *
-
+import PyPDF2
 
 parser = argparse.ArgumentParser(description='Extract pages from a PDF into a new pdf')
 parser.add_argument('--input', type=str, help='path to input file')
@@ -17,19 +16,16 @@ parser.add_argument('--end', type=int, help='end index (inclusive)')
 parser.add_argument('--output', type=str, help='path to output file')
 args = parser.parse_args()
 
-inputDoc = CGPDFDocumentCreateWithProvider(CGDataProviderCreateWithFilename(args.input))
+original_reader = PyPDF2.PdfFileReader(args.input)
 
-if inputDoc:
-  maxPages = inputDoc.getNumberOfPages()  
-else:
-  sys.exit(2)
+new_file = PyPDF2.PdfFileWriter()
+for page_index_from_zero in range((args.start-1), (args.end-1)+1):
+  #pages are zero-indexed; need the following page index for python indexing
+  print('Adding page '+str(page_index_from_zero+1)+'...')
+  page = original_reader.getPage(page_index_from_zero)
+  new_file.addPage(page)
 
-print('Extracting pages '+str(args.start)+' to '+str(args.end)+' of '+args.input +' to new file '+args.output)
-
-pageRect = CGRectMake (0, 0, 612, 792)
-writeContext = CGPDFContextCreateWithFilename(args.output, pageRect)
-for pageNum in range(args.start, args.end + 1):
-  mediaBox = inputDoc.getMediaBox(pageNum)
-  writeContext.beginPage(mediaBox)
-  writeContext.drawPDFDocument(mediaBox, inputDoc, pageNum)
-  writeContext.endPage()
+print('Saving to new file...')
+out_file = open(args.output, 'wb')
+new_file.write(out_file)
+out_file.close()
